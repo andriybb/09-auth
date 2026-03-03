@@ -1,48 +1,49 @@
-"use client";
-import { useEffect } from "react";
-import css from "./Modal.module.css";
-import { createPortal } from "react-dom";
+'use client';
+
+import css from './Modal.module.css';
+
+import { createPortal } from 'react-dom';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
 }
-let modalRoot: HTMLElement | null = null;
 
-if (typeof document !== 'undefined') {
-  modalRoot = document.querySelector('#modal-root') || document.body;
-}
-export default function Modal({ onClose, children }: ModalProps) {
+export default function Modal({ children, onClose }: ModalProps) {
+  const router = useRouter();
+
+  function clickBackdrop(ev: React.MouseEvent) {
+    if (ev.target != ev.currentTarget) {
+      return;
+    }
+    onClose();
+  }
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKeyDown);
+    function closeModal(ev: KeyboardEvent) {
+      if (ev.key === 'Escape') {
+        onClose();
+      }
+    }
+    document.addEventListener('keydown', closeModal);
     document.body.style.overflow = 'hidden';
 
     return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-        document.body.style.overflow = '';
+      document.removeEventListener('keydown', closeModal);
+      document.body.style.overflow = '';
     };
-}, [onClose]);
-
-const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-        onClose();
-    }
-};
-  
-  if (!modalRoot) return null;
+  }, [onClose, router]);
 
   return createPortal(
     <div
-  className={css.backdrop}
-  role="dialog"
-  aria-modal="true"
-  onClick={handleBackdropClick}
->
-  <div className={css.modal}>
-  {children}
-  </div>
-</div>, modalRoot);
+      onClick={clickBackdrop}
+      className={css.backdrop}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className={css.modal}>{children}</div>
+    </div>,
+    document.body
+  );
 }

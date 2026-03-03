@@ -1,16 +1,25 @@
+import css from './default.module.css';
+
+import { FetchTagNote } from '@/types/note';
+
 import Link from 'next/link';
-import css from './SidebarNotes.module.css';
-import type { NoteTag } from '@/types/note';
 
-const tags: (NoteTag | 'all')[] = ['all', 'Todo', 'Personal', 'Work', 'Meeting', 'Shopping'];
+export default function Sidebar() {
+  const tags: FetchTagNote[] = [
+    'all',
+    'Todo',
+    'Work',
+    'Personal',
+    'Meeting',
+    'Shopping',
+  ];
 
-export default function SidebarNotes() {
   return (
     <ul className={css.menuList}>
-      {tags.map((tag) => (
-        <li key={tag} className={css.menuItem}>
-          <Link href={`/notes/filter/${tag}`} className={css.menuLink}>
-            <strong>{tag === 'all' ? 'All notes' : tag}</strong>
+      {tags.map((el, index) => (
+        <li key={index} className={css.menuItem}>
+          <Link href={`/notes/filter/${el}`} className={css.menuLink}>
+            {`${el === 'all' ? 'All notes' : el}`}
           </Link>
         </li>
       ))}

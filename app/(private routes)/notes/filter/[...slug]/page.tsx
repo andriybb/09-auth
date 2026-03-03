@@ -1,52 +1,61 @@
-import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import NotesByCategory from './Notes.client';
-import { fetchNotes } from '@/lib/api/api';
-import type { NoteTag } from '@/types/note';
+import {
+  QueryClient,
+  HydrationBoundary,
+  dehydrate,
+} from '@tanstack/react-query';
 import { Metadata } from 'next';
 
-interface Props {
+import { FetchTagNote } from '@/types/note';
+import { fetchNotes } from '@/lib/api/serverApi';
+import NotesClient from './Notes.client';
+
+import css from './page.module.css';
+
+interface NotesProps {
   params: Promise<{ slug: string[] }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: NotesProps): Promise<Metadata> {
   const { slug } = await params;
-  const tag = slug?.[0] ?? 'all';
+  const tag = slug[0];
 
   return {
-    title: `NoteHub — ${tag} notes`,
-    description: `Page with notes filtered by category: ${tag}`,
+    title: `${tag}`,
+    description: `Page for ${tag} tag`,
     openGraph: {
-      title: `NoteHub — ${tag} notes`,
-      description: `Page with notes filtered by category: ${tag}`,
-      url: `https://notehub.com/notes/${tag}`,
-      siteName: 'NoteHub - Your Personal Note Management App',
+      title: `${tag}`,
+      description: `Page for ${tag} tag`,
+      url: 'https://08-zustand-steel-nine.vercel.app/',
       images: [
         {
           url: 'https://ac.goit.global/fullstack/react/notehub-og-meta.jpg',
           width: 1200,
           height: 630,
-          alt: `NoteHub - notes filtered by ${tag}`,
+          alt: 'logo',
         },
       ],
-      type: 'article',
     },
   };
 }
 
-export default async function NoteFilter({ params }: Props) {
-  const { slug } = await params;
-  const tag = slug?.[0] as NoteTag | 'all' | undefined;
-
+export default async function Notes({ params }: NotesProps) {
   const queryClient = new QueryClient();
 
+  const { slug } = await params;
+  const tag = slug[0] as FetchTagNote;
+
   await queryClient.prefetchQuery({
-    queryKey: ['notes', tag, '', 1],
-    queryFn: () => fetchNotes('', 1, tag),
+    queryKey: ['notes', tag, 1, ''],
+    queryFn: () => fetchNotes(tag, 1, ''),
   });
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <NotesByCategory tag={tag} />
-    </HydrationBoundary>
+    <main className={css.main}>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <NotesClient tag={tag} />
+      </HydrationBoundary>
+    </main>
   );
 }

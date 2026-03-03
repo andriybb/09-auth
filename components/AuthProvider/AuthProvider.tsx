@@ -1,74 +1,31 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { checkSession, logout } from "@/lib/api/clientApi";
-import useAuthStore from "@/lib/store/authStore";
+import { checkSession, getMe } from '@/lib/api/clientApi';
+import { useLogin } from '@/lib/store/authStore';
+import { useEffect } from 'react';
 
-const PRIVATE_PREFIXES = ["/profile", "/notes"];
-
-function isPrivatePath(path: string): boolean {
-  return PRIVATE_PREFIXES.some((prefix) => path.startsWith(prefix));
-}
-
-interface Props {
+interface AuthStoreProps {
   children: React.ReactNode;
 }
 
-export default function AuthProvider({ children }: Props) {
-  const [checking, setChecking] = useState(true);
-  const { setUser, clearIsAuthenticated, isAuthenticated } = useAuthStore();
-  const pathname = usePathname();
-  const router = useRouter();
+export default function AuthStore({ children }: AuthStoreProps) {
+  const setUser = useLogin(state => state.setUser);
+  const logout = useLogin(state => state.clearIsAuthenticated);
 
   useEffect(() => {
-    async function verifySession() {
-      setChecking(true);
-      try {
-        const user = await checkSession();
+    async function getUser() {
+      const isLogin = await checkSession();
+      if (isLogin) {
+        const user = await getMe();
         if (user) {
           setUser(user);
-        } else {
-          clearIsAuthenticated();
-          if (isPrivatePath(pathname)) {
-            await logout().catch(() => {});
-            router.replace("/sign-in");
-            return;
-          }
         }
-      } catch {
-        clearIsAuthenticated();
-        if (isPrivatePath(pathname)) {
-          router.replace("/sign-in");
-          return;
-        }
-      } finally {
-        setChecking(false);
+      } else {
+        logout();
       }
     }
+    getUser();
+  }, [setUser, logout]);
 
-    verifySession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
-  if (checking && isPrivatePath(pathname)) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <span>Loading...</span>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated && isPrivatePath(pathname)) {
-    return null;
-  }
-
-  return <>{children}</>;
+  return children;
 }

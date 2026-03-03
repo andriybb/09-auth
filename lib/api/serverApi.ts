@@ -1,61 +1,96 @@
-import { cookies } from "next/headers";
-import axios from "axios";
-import { Note, NotesResponse, NoteTag } from "@/types/note";
-import { User } from "@/types/user";
+import { cookies } from 'next/headers';
+import { nextServer } from './api';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL + "/api";
+import type { User } from '@/types/user';
+import { type Note, type FetchTagNote } from '@/types/note';
 
-async function getHeaders() {
+interface Answer {
+  notes: Note[];
+  totalPages: number;
+}
+
+export async function fetchNotes(
+  tag: FetchTagNote,
+  page: number,
+  search: string
+): Promise<Answer> {
   const cookieStore = await cookies();
-  return { Cookie: cookieStore.toString() };
-}
+  if (tag === 'all' && !search) {
+    const res = await nextServer.get<Answer>(
+      `/notes?&page=${page}&perPage=12`,
+      {
+        headers: {
+          Cookie: cookieStore.toString(),
+        },
+      }
+    );
+    return res.data;
+  }
 
-// ─── Notes ─────────────────────────────────────────────────────────────────────
+  if (tag !== 'all' && !search) {
+    const res = await nextServer.get<Answer>(
+      `/notes?tag=${tag}&page=${page}&perPage=12`,
+      {
+        headers: {
+          Cookie: cookieStore.toString(),
+        },
+      }
+    );
+    return res.data;
+  }
 
-export interface ServerFetchNotesParams {
-  page?: number;
-  perPage?: number;
-  search?: string;
-  tag?: NoteTag | "";
-}
+  if (tag === 'all' && search) {
+    const res = await nextServer.get<Answer>(
+      `/notes?search=${search}&page=${page}&perPage=12`,
+      {
+        headers: {
+          Cookie: cookieStore.toString(),
+        },
+      }
+    );
+    return res.data;
+  }
 
-export async function fetchNotes(params: ServerFetchNotesParams = {}): Promise<NotesResponse> {
-  const headers = await getHeaders();
-  const { data } = await axios.get<NotesResponse>(`${baseURL}/notes`, {
-    params: { perPage: 12, ...params },
-    headers,
-    withCredentials: true,
-  });
-  return data;
+  const res = await nextServer.get<Answer>(
+    `/notes?search=${search}&tag=${tag}&page=${page}&perPage=12`,
+    {
+      headers: {
+        Cookie: cookieStore.toString(),
+      },
+    }
+  );
+  return res.data;
 }
 
 export async function fetchNoteById(id: string): Promise<Note> {
-  const headers = await getHeaders();
-  const { data } = await axios.get<Note>(`${baseURL}/notes/${id}`, {
-    headers,
-    withCredentials: true,
+  const cookieStore = await cookies();
+
+  const res = await nextServer.get<Note>(`/notes/${id}`, {
+    headers: {
+      Cookie: cookieStore.toString(),
+    },
   });
-  return data;
+  return res.data;
 }
-
-// ─── Auth ──────────────────────────────────────────────────────────────────────
-
-export async function checkSession(): Promise<User | null> {
-  const headers = await getHeaders();
-  const { data } = await axios.get<User | null>(`${baseURL}/auth/session`, {
-    headers,
-    withCredentials: true,
-  });
-  return data ?? null;
-}
-
-// ─── User ──────────────────────────────────────────────────────────────────────
 
 export async function getMe(): Promise<User> {
-  const headers = await getHeaders();
-  const { data } = await axios.get<User>(`${baseURL}/users/me`, {
-    headers,
-    withCredentials: true,
+  const cookieStore = await cookies();
+
+  const res = await nextServer.get('/users/me', {
+    headers: {
+      Cookie: cookieStore.toString(),
+    },
   });
-  return data;
+  return res.data;
+}
+
+export async function checkSession() {
+  const cookieStore = await cookies();
+
+  const res = await nextServer.get('/auth/session', {
+    headers: {
+      Cookie: cookieStore.toString(),
+    },
+  });
+  return res;
 }

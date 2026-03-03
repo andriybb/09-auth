@@ -1,14 +1,15 @@
-"use client";
-type Props = {
+'use client';
+
+interface ErrorProps {
   error: Error;
   reset: () => void;
-};
+}
 
-export default function Error ({ error, reset }: Props) {
+export default function Error({ error, reset }: ErrorProps) {
   return (
-    <div>
+    <>
       <p>Could not fetch the list of notes. {error.message}</p>
-      <button onClick={reset}>Спробувати знову</button>
-    </div>
+      <button onClick={reset}>Try again...</button>
+    </>
   );
 }

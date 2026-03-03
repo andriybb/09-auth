@@ -1,32 +1,24 @@
-// export interface Note {
-//     id: string;
-//     title: string;
-//     content: string;
-//     tag: "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
-//     createdAt: string;
-//     updatedAt: string;
-//   }
-  
-//   export interface NoteResponse {
-//     notes: Note[];
-//   }
+type TagNote = 'Todo' | 'Work' | 'Personal' | 'Meeting' | 'Shopping';
 
-//   export const NOTE_TAGS = ['Todo', 'Work', 'Personal', 'Meeting', 'Shopping'] as const;
-// export type NoteTag = (typeof NOTE_TAGS)[number];
-export type NoteTag = "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
+export type FetchTagNote =
+  | 'Todo'
+  | 'Work'
+  | 'Personal'
+  | 'Meeting'
+  | 'Shopping'
+  | 'all';
 
 export interface Note {
-  id: string;
-  title: string;
   content: string;
-  tag: NoteTag;
+  id: string;
+  tag: TagNote;
+  title: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface NotesResponse {
-  notes: Note[];
-  totalPages: number;
-  page: number;
-  perPage: number;
+export interface NewNote {
+  title: string;
+  content: string;
+  tag: TagNote;
 }

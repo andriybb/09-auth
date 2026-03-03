@@ -1,76 +1,57 @@
 'use client';
-import css from "../../page.module.css";
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { fetchNotes } from '@/lib/api/api';
-import NoteList from '@/components/NoteList/NoteList';
-import SearchBox from '@/components/SearchBox/SearchBox';
-import Pagination from '@/components/Pagination/Pagination';
-import type { NoteTag } from '@/types/note';
-import { useState } from 'react';
-import { useDebounce } from 'use-debounce';
-import Link from "next/link";
 
-interface Props {
-  tag?: NoteTag | 'all';
+import css from './page.module.css';
+
+import { type FetchTagNote } from '@/types/note';
+
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { fetchNotes } from '@/lib/api/clientApi';
+import { useDebouncedCallback } from 'use-debounce';
+import Link from 'next/link';
+
+import NoteList from '@/components/NoteList/NoteList';
+import Pagination from '@/components/Pagination/Pagination';
+import SearchBox from '@/components/SearchBox/SearchBox';
+
+interface NotesClientProps {
+  tag: FetchTagNote;
 }
 
-const NotesByCategory = ({ tag }: Props) => {
+export default function NotesClient({ tag }: NotesClientProps) {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [word, setWord] = useState('');
 
-
-  const [debouncedSearch] = useDebounce(search, 500);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['notes', tag, debouncedSearch, page],
-    queryFn: () => fetchNotes(debouncedSearch, page, tag),
+  const { data } = useQuery({
+    queryKey: ['notes', tag, page, word],
+    queryFn: () => fetchNotes(tag, page, word),
     placeholderData: keepPreviousData,
-    staleTime: 60 * 1000,
+    refetchOnMount: false,
+    throwOnError: true,
   });
 
-  const notes = data?.notes ?? [];
-  const totalPages = data?.totalPages ?? 1;
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
+  const changeWord = useDebouncedCallback((newWord: string) => {
+    const page = 1;
+    setPage(page);
+    setWord(newWord);
+  }, 500);
 
   return (
-    <div className={css.app}>
-      <h1>Список Нотаток {tag ? `за фільтром - ${tag}` : ''}</h1>
+    <div className={css.notes}>
       <div className={css.toolbar}>
-      <SearchBox
-        value={search}
-        onChange={handleSearchChange}
-      />
-{totalPages > 1 && (
-        <Pagination
-          totalPages={totalPages}
-          currentPage={page}
-          setCurrentPage={setPage}
-        />
-      )}
-      <Link className={css.button} href="/notes/action/create">
-        Створити нотатку
-      </Link>
-</div>
-      
-   
-        
-      
-
-      {isLoading && <p>Завантаження...</p>}
-
-      {notes.length > 0 ? (
-        <NoteList notes={notes} />
-      ) : (
-        !isLoading && <p>Нотаток не знайдено</p>
-      )}
-
-      
+        <SearchBox changeWord={changeWord} />
+        {data && data.totalPages > 1 && (
+          <Pagination
+            page={page}
+            totalPages={data.totalPages}
+            setPage={setPage}
+          />
+        )}
+        <Link className={css.toolBtn} href={'/notes/action/create'}>
+          Create note +
+        </Link>
+      </div>
+      {data && data.notes.length > 0 && <NoteList noteList={data.notes} />}
     </div>
   );
-};
-
-export default NotesByCategory;
+}

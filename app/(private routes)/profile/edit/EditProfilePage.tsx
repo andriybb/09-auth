@@ -23,7 +23,7 @@ export default function EditProfilePage() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const updated = await updateMe({ username });
+    const updated = await updateMe({ username, email: user!.email });
     setStoreUser(updated);
     router.push("/profile");
   }

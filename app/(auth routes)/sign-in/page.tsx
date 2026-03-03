@@ -1,36 +1,55 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { login } from "@/lib/api/clientApi";
-import useAuthStore from "@/lib/store/authStore";
-import css from "./SignInPage.module.css";
+import css from './page.module.css';
 
-export default function SignInPage() {
-  const [error, setError] = useState("");
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { AxiosError } from 'axios';
+
+import { UserReg } from '@/types/user';
+import { login, getMe } from '@/lib/api/clientApi';
+import { useLogin } from '@/lib/store/authStore';
+
+import Modal from '@/components/Modal/Modal';
+
+export default function Login() {
+  const setUser = useLogin(state => state.setUser);
   const router = useRouter();
-  const { setUser } = useAuthStore();
+  const [isModal, setIsModal] = useState(false);
+  const [mess, setMess] = useState('');
 
-  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
+  function closeModal() {
+    router.push('/sign-up');
+  }
 
-    const form = e.currentTarget;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+  async function handleSubmit(formData: FormData) {
+    const data: UserReg = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+    };
 
     try {
-      const user = await login({ email, password });
-      setUser(user);
-      router.push("/profile");
-    } catch {
-      setError("Invalid email or password. Please try again.");
+      const res = await login(data);
+      if (res) {
+        setMess('');
+        const user = await getMe();
+        setUser(user);
+        router.push('/profile');
+      }
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (error.response?.data?.response?.message === 'Invalid credentials') {
+          setIsModal(true);
+        }
+        setMess(error.response?.data?.response?.message);
+      }
+      setMess('An error has occurred. We apologize...');
     }
   }
 
   return (
     <main className={css.mainContent}>
-      <form className={css.form} onSubmit={handleSubmit}>
+      <form className={css.form} action={handleSubmit}>
         <h1 className={css.formTitle}>Sign in</h1>
 
         <div className={css.formGroup}>
@@ -52,6 +71,7 @@ export default function SignInPage() {
             name="password"
             className={css.input}
             required
+            minLength={6}
           />
         </div>
 
@@ -61,7 +81,12 @@ export default function SignInPage() {
           </button>
         </div>
 
-        {error && <p className={css.error}>{error}</p>}
+        {mess !== '' && <p className={css.error}>{mess}</p>}
+        {isModal && (
+          <Modal onClose={closeModal}>
+            <p>Invalid credentials or user not found.</p>
+          </Modal>
+        )}
       </form>
     </main>
   );

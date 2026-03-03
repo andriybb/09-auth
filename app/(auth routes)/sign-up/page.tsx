@@ -1,42 +1,53 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { register } from "@/lib/api/clientApi";
-import useAuthStore from "@/lib/store/authStore";
-import axios from "axios";
-import css from "./SignUpPage.module.css";
+import css from './page.module.css';
 
-export default function SignUpPage() {
-  const [error, setError] = useState("");
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AxiosError } from 'axios';
+
+import { register, getMe } from '@/lib/api/clientApi';
+import { type UserReg } from '@/types/user';
+import { useLogin } from '@/lib/store/authStore';
+
+import Modal from '@/components/Modal/Modal';
+
+export default function Register() {
+  const setUser = useLogin(state => state.setUser);
   const router = useRouter();
-  const { setUser } = useAuthStore();
+  const [error, setError] = useState(false);
+  const [isModal, setIsModal] = useState(false);
 
-  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
+  function closeModal() {
+    router.push('/sign-in');
+  }
 
-    const form = e.currentTarget;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
-
+  async function handleSubmit(formData: FormData) {
+    const data: UserReg = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+    };
     try {
-      const user = await register({ email, password });
-      setUser(user);
-      router.push("/profile");
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
-        setError("User already exists. Please use a different email.");
-      } else {
-        setError("Registration failed. Please try again.");
+      const res = await register(data);
+      if (res) {
+        const user = await getMe();
+        setUser(user);
+        router.push('/profile');
       }
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        if (error.response?.data?.response?.message === 'User exists') {
+          setIsModal(true);
+        }
+      }
+      setError(true);
     }
   }
 
   return (
     <main className={css.mainContent}>
       <h1 className={css.formTitle}>Sign up</h1>
-      <form className={css.form} onSubmit={handleSubmit}>
+      <form className={css.form} action={handleSubmit}>
         <div className={css.formGroup}>
           <label htmlFor="email">Email</label>
           <input
@@ -56,6 +67,7 @@ export default function SignUpPage() {
             name="password"
             className={css.input}
             required
+            minLength={6}
           />
         </div>
 
@@ -65,7 +77,12 @@ export default function SignUpPage() {
           </button>
         </div>
 
-        {error && <p className={css.error}>{error}</p>}
+        {error && <p className={css.error}>Error</p>}
+        {isModal && (
+          <Modal onClose={closeModal}>
+            <p>This user is already registered. Please go to the login page.</p>
+          </Modal>
+        )}
       </form>
     </main>
   );
